@@ -29,7 +29,7 @@ const int POT_INPUT_PIN = A0;
 const int RGB_RED_PIN = D0;
 const int RGB_GREEN_PIN  = D1;
 const int RGB_BLUE_PIN  = D2;
-const int DELAY = 1000; // delay between changing colors
+const int DELAY = 500; // delay between changing colors
 
 
 void setup() {
@@ -49,26 +49,34 @@ void loop() {
   // the analogRead on the RedBear Duo seems to go from 0 to 4092 (and not 4095
   // as you would expect with a power of two--e.g., 2^12 or 12 bits). 
   // now need to map all 16^6 HEX colors 
-  int hexVal;
-  hexVal = map(potVal, 0, 4092, 0x000000, 0xFFFFFF);
+
+  
+  unsigned int hexVal;
+  hexVal = map(potVal, 0, 4092, 0, 256 * 256 * 256);
   
   Serial.print(potVal);
   Serial.print(",");
-  Serial.println(hexVal);
+  Serial.print(hexVal);
 
   // try this for rgb: https://stackoverflow.com/questions/3723846/convert-from-hex-color-to-rgb-struct-in-c
-
-  hexToRGB(hexVal);
   
-  delay(1000);
+  int r = (hexVal >> 16) & 0xFF;
+  int g = (hexVal >> 8) & 0xFF;
+  int b = (hexVal) & 0xFF;
+  setColor(r,g,b);
+  
+
+  //hexToRGB(hexVal);
+  
+  delay(DELAY);
 }
 
 
 // algo taken from http://scanftree.com/programs/c/c-code-to-convert-decimal-to-hexadecimal/
-void hexToRGB(int d)
+void hexToRGB(unsigned int d)
 {
   int digits[6] = {0, 0, 0, 0, 0, 0};
-  int quotient = d;
+  unsigned int quotient = d;
 
   for (int i = 0; i < 6; i++) {
 
@@ -83,14 +91,7 @@ void hexToRGB(int d)
   int red = 16 * digits[5] + digits[4];
   int green = 16 * digits[3] + digits[2];
   int blue = 16 * digits[1] + digits[0];
-/*
-  Serial.print(",");
-  Serial.print(red);
-  Serial.print(",");
-  Serial.print(green);
-  Serial.print(",");
-  Serial.println(blue);
-*/
+
   setColor(red, green, blue);
 }
 
