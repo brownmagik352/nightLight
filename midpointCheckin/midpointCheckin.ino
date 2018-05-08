@@ -30,16 +30,22 @@ const int POT_INPUT_PIN_R = A0;
 const int POT_INPUT_PIN_G = A1;
 const int POT_INPUT_PIN_B = A2;
 
+const int PHOTO_INPUT_PIN = A4;
+const float MAX_VOLTAGE = 3.3;
+const int MAX_ADC_VALUE = 4096;
+
 const int RGB_RED_PIN = D0;
 const int RGB_GREEN_PIN  = D1;
 const int RGB_BLUE_PIN  = D2;
-const int DELAY = 500; // delay between changing colors
+const int DELAY = 1000; // delay between changing colors
 
 
 void setup() {
   pinMode(POT_INPUT_PIN_R, INPUT);
   pinMode(POT_INPUT_PIN_G, INPUT);
   pinMode(POT_INPUT_PIN_B, INPUT);
+
+  pinMode(PHOTO_INPUT_PIN, INPUT);
   
   pinMode(RGB_RED_PIN, OUTPUT);
   pinMode(RGB_GREEN_PIN, OUTPUT);
@@ -60,9 +66,16 @@ void loop() {
   int ledValB = map(potValB, 0, 4092, 0, 255);
 
   setColor(ledValR, ledValG, ledValB);
+
+  int photoVal = analogRead(PHOTO_INPUT_PIN);
+  photoVal = MAX_ADC_VALUE - photoVal;
+  float inputVoltage = MAX_VOLTAGE * photoVal / MAX_ADC_VALUE;
+  Serial.print(photoVal);
+  Serial.print(", ");
+  Serial.println(inputVoltage);
   
 
-  delay(100);
+  delay(DELAY);
 }
 
 void setColor(int red, int green, int blue)
