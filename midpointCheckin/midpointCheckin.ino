@@ -37,7 +37,7 @@ const int MAX_ADC_VALUE = 4096;
 const int RGB_RED_PIN = D0;
 const int RGB_GREEN_PIN  = D1;
 const int RGB_BLUE_PIN  = D2;
-const int DELAY = 1000; // delay between changing colors
+const int DELAY = 500; // delay between changing colors
 
 
 void setup() {
@@ -54,27 +54,25 @@ void setup() {
 }
 
 void loop() {
+  
+  // read in photovoltaic cell
+  int photoVal = analogRead(PHOTO_INPUT_PIN);
+  // use brightness as the cap on intensity for each of RGB; inverted so darker lighting => brighter LED
+  // pulled from http://forum.arduino.cc/index.php?topic=272862.0
+  int brightness = map(photoVal, 0, 4096, 255, 0);
 
   // read the potentiometer value
   int potValR = analogRead(POT_INPUT_PIN_R);
-  int ledValR = map(potValR, 0, 4092, 0, 255);
+  int ledValR = map(potValR, 0, 4092, 0, brightness);
 
   int potValG = analogRead(POT_INPUT_PIN_G);
-  int ledValG = map(potValG, 0, 4092, 0, 255);
+  int ledValG = map(potValG, 0, 4092, 0, brightness);
   
   int potValB = analogRead(POT_INPUT_PIN_B);
-  int ledValB = map(potValB, 0, 4092, 0, 255);
+  int ledValB = map(potValB, 0, 4092, 0, brightness);
 
   setColor(ledValR, ledValG, ledValB);
-
-  int photoVal = analogRead(PHOTO_INPUT_PIN);
-  photoVal = MAX_ADC_VALUE - photoVal;
-  float inputVoltage = MAX_VOLTAGE * photoVal / MAX_ADC_VALUE;
-  Serial.print(photoVal);
-  Serial.print(", ");
-  Serial.println(inputVoltage);
-  
-
+ 
   delay(DELAY);
 }
 
