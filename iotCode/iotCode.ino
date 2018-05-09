@@ -19,6 +19,11 @@ const int RGB_GREEN_PIN  = D1;
 const int RGB_BLUE_PIN  = D2;
 const int DELAY = 500; // delay between changing colors
 
+// struct to store rgb values
+struct RGB {
+  int r, g, b;
+};
+
 
 void setup() {
   pinMode(POT_INPUT_PIN, INPUT);
@@ -37,13 +42,26 @@ void loop() {
   // pot value
   int potVal = analogRead(POT_INPUT_PIN);
 
+  struct RGB ledVal = potToHexToRGB(potVal); 
+
+  setColor(ledVal.r, ledVal.g, ledVal.b);
+ 
+  delay(DELAY);
+}
+
+// function that goes from a single pot value to hex color value to rgb
+struct RGB potToHexToRGB(int potVal) {
+
+  // ledVal to return
+  struct RGB ledVal; 
+
   // hex color
   unsigned int hexVal;
   hexVal = map(potVal, 0, 4092, 0, 256 * 256 * 256);
   // try this for hex to rgb: https://stackoverflow.com/questions/3723846/convert-from-hex-color-to-rgb-struct-in-c
-  int r = (hexVal >> 16) & 0xFF;
-  int g = (hexVal >> 8) & 0xFF;
-  int b = (hexVal) & 0xFF;
+  ledVal.r = (hexVal >> 16) & 0xFF;
+  ledVal.g = (hexVal >> 8) & 0xFF;
+  ledVal.b = (hexVal) & 0xFF;
 
   // read in photovoltaic cell
   int photoVal = analogRead(PHOTO_INPUT_PIN);
@@ -51,13 +69,12 @@ void loop() {
   // based on http://forum.arduino.cc/index.php?topic=272862.0
   int brightness = map(photoVal, 0, 4096, 255, 0);
   // now modify RGB with brightness
-  r = map(r, 0, 255, 0, brightness);
-  g = map(g, 0, 255, 0, brightness);
-  b = map(b, 0, 255, 0, brightness);
+  ledVal.r = map(ledVal.r, 0, 255, 0, brightness);
+  ledVal.g = map(ledVal.g, 0, 255, 0, brightness);
+  ledVal.b = map(ledVal.b, 0, 255, 0, brightness);
+
+  return ledVal;
   
-  setColor(r, g, b);
- 
-  delay(DELAY);
 }
 
 void setColor(int red, int green, int blue)
