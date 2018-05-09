@@ -37,44 +37,55 @@ void setup() {
 }
 
 void loop() {
-
-  // pot value -> hex color -> rgb values
   // pot value
   int potVal = analogRead(POT_INPUT_PIN);
+  // read in photovoltaic cell
+  int photoVal = analogRead(PHOTO_INPUT_PIN);
+  
+  unsigned int hexVal = potToHex(potVal);
+  struct RGB ledVal = hexToRGB(hexVal);
+  struct RGB ledValBrightnessAdjusted = rgbLedBrightnessAdjuster(ledVal, photoVal);
 
-  struct RGB ledVal = potToHexToRGB(potVal); 
-
-  setColor(ledVal.r, ledVal.g, ledVal.b);
+  setColor(ledValBrightnessAdjusted.r, ledValBrightnessAdjusted.g, ledValBrightnessAdjusted.b);
  
   delay(DELAY);
 }
 
-// function that goes from a single pot value to hex color value to rgb
-struct RGB potToHexToRGB(int potVal) {
 
-  // ledVal to return
-  struct RGB ledVal; 
 
-  // hex color
+//function that goes from single pot value to hex color
+unsigned int potToHex(int potVal) {
   unsigned int hexVal;
   hexVal = map(potVal, 0, 4092, 0, 256 * 256 * 256);
+  return hexVal;
+}
+
+// function that goes from hex color value to rgb
+struct RGB hexToRGB(unsigned int hexVal) {
+  struct RGB ledVal; 
+
   // try this for hex to rgb: https://stackoverflow.com/questions/3723846/convert-from-hex-color-to-rgb-struct-in-c
   ledVal.r = (hexVal >> 16) & 0xFF;
   ledVal.g = (hexVal >> 8) & 0xFF;
   ledVal.b = (hexVal) & 0xFF;
 
-  // read in photovoltaic cell
-  int photoVal = analogRead(PHOTO_INPUT_PIN);
+  return ledVal;
+}
+
+// function that takes an RGB LED value and modifies brightness based on photovoltaic cell
+struct RGB rgbLedBrightnessAdjuster(struct RGB original, int photoVal) {
+  struct RGB brightnessAdjusted;
+
   // use brightness as the cap on intensity for each of RGB; inverted so darker lighting => brighter LED
   // based on http://forum.arduino.cc/index.php?topic=272862.0
   int brightness = map(photoVal, 0, 4096, 255, 0);
-  // now modify RGB with brightness
-  ledVal.r = map(ledVal.r, 0, 255, 0, brightness);
-  ledVal.g = map(ledVal.g, 0, 255, 0, brightness);
-  ledVal.b = map(ledVal.b, 0, 255, 0, brightness);
-
-  return ledVal;
   
+  // now modify RGB with brightness
+  brightnessAdjusted.r = map(original.r, 0, 255, 0, brightness);
+  brightnessAdjusted.g = map(original.g, 0, 255, 0, brightness);
+  brightnessAdjusted.b = map(original.b, 0, 255, 0, brightness);
+  
+  return brightnessAdjusted;
 }
 
 void setColor(int red, int green, int blue)
