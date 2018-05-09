@@ -88,8 +88,7 @@ struct RGB rgbLedBrightnessAdjuster(struct RGB original, int photoVal) {
   return brightnessAdjusted;
 }
 
-void setColor(int red, int green, int blue)
-{
+void setColor(int red, int green, int blue) {
   #ifdef COMMON_ANODE
     red = 255 - red;
     green = 255 - green;
