@@ -19,6 +19,10 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.IBinder;
 import android.support.annotation.ColorInt;
 import android.support.v7.app.AppCompatActivity;
@@ -43,7 +47,7 @@ import java.util.TimerTask;
 // https://github.com/Pes8/android-material-color-picker-dialog
 import com.pes.androidmaterialcolorpickerdialog.ColorPicker;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
     // Define the device name and the length of the name
     // Note the device name and the length should be consistent with the ones defined in the Duo sketch
     private String mTargetDeviceName = "apsuman";
@@ -56,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView mDeviceName = null;
     private TextView mRssiValue = null;
     private TextView mUUID = null;
-    private Button mColorPickerBtn;
     private String mBluetoothDeviceName = "";
     private String mBluetoothDeviceUUID = "";
 
@@ -79,11 +82,15 @@ public class MainActivity extends AppCompatActivity {
     final private static char[] hexArray = { '0', '1', '2', '3', '4', '5', '6',
             '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
-    // RGB colors to send over
-    private int mRed;
-    private int mGreen;
-    private int mBlue;
+    // Accelerometer Stuff
+    private boolean mUsingAccel = false;
+    private SensorManager _sensorManager;
+    private Sensor _accelSensor;
+    private Button mAccelPickerBtn;
+    private TextView accelValues;
 
+    // used for manual picker
+    private Button mColorPickerBtn;
 
     // Process service connection. Created by the RedBear Team
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -109,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
         flag = false;
         mConnState = false;
         mColorPickerBtn.setEnabled(flag);
+        mAccelPickerBtn.setEnabled(flag);
         mConnectBtn.setText("Connect");
         mRssiValue.setText("");
         mDeviceName.setText("");
@@ -119,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
         flag = true;
         mConnState = true;
         mColorPickerBtn.setEnabled(flag);
+        mAccelPickerBtn.setEnabled(flag);
         mConnectBtn.setText("Disconnect");
     }
 
@@ -269,13 +278,26 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Accelerometer Picker setup
+        // See https://developer.android.com/guide/topics/sensors/sensors_motion.html
+        _sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        _accelSensor = _sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        _sensorManager.registerListener(this, _accelSensor, SensorManager.SENSOR_DELAY_GAME);
+        accelValues = (TextView) findViewById(R.id.accel_values);
+        accelValues.setText("Accel X: %f\tR: %d\nAccel Y: %f\tG: %d\nAccel Z: %f\tB: %d");
+        mAccelPickerBtn = (Button) findViewById(R.id.accel_toggle);
+
+
+        // Manual Picker setup
+        mColorPickerBtn = (Button) findViewById(R.id.colorPickerButton);
+        final ColorPicker cp = new ColorPicker(MainActivity.this);
+
         // Associate all UI components with variables
         mConnectBtn = (Button) findViewById(R.id.connectBtn);
         mDeviceName = (TextView) findViewById(R.id.deviceName);
         mRssiValue = (TextView) findViewById(R.id.rssiValue);
-        mColorPickerBtn = (Button) findViewById(R.id.colorPickerButton);
         mUUID = (TextView) findViewById(R.id.uuidValue);
-        final ColorPicker cp = new ColorPicker(MainActivity.this);
+
 
         // Connection button click event
         mConnectBtn.setOnClickListener(new View.OnClickListener() {
@@ -328,6 +350,10 @@ public class MainActivity extends AppCompatActivity {
         mColorPickerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
+                // disable accel picker button
+                mAccelPickerBtn.setEnabled(false);
+
                 /* Show color picker dialog */
                 cp.show();
 
@@ -343,8 +369,18 @@ public class MainActivity extends AppCompatActivity {
 
                         // If the auto-dismiss option is not enable (disabled as default) you have to manually dimiss the dialog
                         cp.dismiss();
+                        // enable accel picker button
+                        mAccelPickerBtn.setEnabled(true);
+
                     }
                 });
+            }
+        });
+
+        mAccelPickerBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                toggleDebug();
             }
         });
 
@@ -427,5 +463,27 @@ public class MainActivity extends AppCompatActivity {
         }
 
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
+
+    private void toggleDebug() {
+        if (accelValues.getVisibility() == View.VISIBLE) {
+            accelValues.setVisibility(View.INVISIBLE); // hide feedback UI
+            mUsingAccel = false; // stop sending accel value to board
+            mColorPickerBtn.setEnabled(true); // enable other picker
+        } else {
+            accelValues.setVisibility(View.VISIBLE); // show feedback UI
+            mUsingAccel = true; // start sending accel value to board
+            mColorPickerBtn.setEnabled(false); // disable other picker
+        }
     }
 }

@@ -119,25 +119,27 @@
         android:layout_marginTop="10dp"
         android:background="#dfdfdf" />
 
-    <LinearLayout
+    <Button
+        android:id="@+id/colorPickerButton"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:orientation="horizontal">
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:enabled="false"
+        android:text="Manual Picker" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="horizontal">
+    <Button
+        android:id="@+id/accel_toggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:enabled="false"
+        android:text="Accel Picker" />
 
-            <Button
-                android:id="@+id/colorPickerButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:enabled="false"
-                android:text="Pick RGB Color" />
-        </LinearLayout>
-    </LinearLayout>
+    <TextView
+        android:id="@+id/accel_values"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:visibility="invisible" />
 
 
 </LinearLayout>
