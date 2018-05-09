@@ -19,7 +19,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.IBinder;
+import android.support.annotation.ColorInt;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -33,10 +35,13 @@ import android.widget.ToggleButton;
 
 import com.example.lianghe.android_ble_basic.BLE.RBLGattAttributes;
 import com.example.lianghe.android_ble_basic.BLE.RBLService;
+import com.pes.androidmaterialcolorpickerdialog.ColorPickerCallback;
 
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import com.pes.androidmaterialcolorpickerdialog.ColorPicker;
 
 public class MainActivity extends AppCompatActivity {
     // Define the device name and the length of the name
@@ -52,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView mRssiValue = null;
     private TextView mUUID = null;
     private ToggleButton mDigitalOutBtn;
+    private Button mColorPickerBtn;
     private String mBluetoothDeviceName = "";
     private String mBluetoothDeviceUUID = "";
 
@@ -73,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
 
     final private static char[] hexArray = { '0', '1', '2', '3', '4', '5', '6',
             '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+
 
     // Process service connection. Created by the RedBear Team
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -263,7 +270,9 @@ public class MainActivity extends AppCompatActivity {
         mDeviceName = (TextView) findViewById(R.id.deviceName);
         mRssiValue = (TextView) findViewById(R.id.rssiValue);
         mDigitalOutBtn = (ToggleButton) findViewById(R.id.DOutBtn);
+        mColorPickerBtn = (Button) findViewById(R.id.colorPickerButton);
         mUUID = (TextView) findViewById(R.id.uuidValue);
+        final ColorPicker cp = new ColorPicker(MainActivity.this);
 
         // Connection button click event
         mConnectBtn.setOnClickListener(new View.OnClickListener() {
@@ -328,6 +337,36 @@ public class MainActivity extends AppCompatActivity {
 
                 mCharacteristicTx.setValue(buf);
                 mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
+            }
+        });
+
+        mColorPickerBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                /* Show color picker dialog */
+                cp.show();
+
+                //cp.enableAutoClose(); // Enable auto-dismiss for the dialog
+
+                /* Set a new Listener called when user click "select" */
+                cp.setCallback(new ColorPickerCallback() {
+                    @Override
+                    public void onColorChosen(@ColorInt int color) {
+                        // Do whatever you want
+                        // Examples
+                        Log.d("Alpha", Integer.toString(Color.alpha(color)));
+                        Log.d("Red", Integer.toString(Color.red(color)));
+                        Log.d("Green", Integer.toString(Color.green(color)));
+                        Log.d("Blue", Integer.toString(Color.blue(color)));
+
+                        Log.d("Pure Hex", Integer.toHexString(color));
+                        Log.d("#Hex no alpha", String.format("#%06X", (0xFFFFFF & color)));
+                        Log.d("#Hex with alpha", String.format("#%08X", (0xFFFFFFFF & color)));
+
+                        // If the auto-dismiss option is not enable (disabled as default) you have to manually dimiss the dialog
+                        cp.dismiss();
+                    }
+                });
             }
         });
 
