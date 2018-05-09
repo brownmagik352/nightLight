@@ -56,7 +56,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView mDeviceName = null;
     private TextView mRssiValue = null;
     private TextView mUUID = null;
-    private ToggleButton mDigitalOutBtn;
     private Button mColorPickerBtn;
     private String mBluetoothDeviceName = "";
     private String mBluetoothDeviceUUID = "";
@@ -109,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
     private void setButtonDisable() {
         flag = false;
         mConnState = false;
-        mDigitalOutBtn.setEnabled(flag);
+        mColorPickerBtn.setEnabled(flag);
         mConnectBtn.setText("Connect");
         mRssiValue.setText("");
         mDeviceName.setText("");
@@ -119,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
     private void setButtonEnable() {
         flag = true;
         mConnState = true;
-        mDigitalOutBtn.setEnabled(flag);
+        mColorPickerBtn.setEnabled(flag);
         mConnectBtn.setText("Disconnect");
     }
 
@@ -274,7 +273,6 @@ public class MainActivity extends AppCompatActivity {
         mConnectBtn = (Button) findViewById(R.id.connectBtn);
         mDeviceName = (TextView) findViewById(R.id.deviceName);
         mRssiValue = (TextView) findViewById(R.id.rssiValue);
-        mDigitalOutBtn = (ToggleButton) findViewById(R.id.DOutBtn);
         mColorPickerBtn = (Button) findViewById(R.id.colorPickerButton);
         mUUID = (TextView) findViewById(R.id.uuidValue);
         final ColorPicker cp = new ColorPicker(MainActivity.this);
@@ -325,28 +323,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        /*
         // Send data to Duo board
-        // It has three bytes: maker, data value, reserved
-        mDigitalOutBtn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-
-
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView,
-                                         boolean isChecked) {
-                byte buf[] = new byte[] { (byte) 0x01, (byte) 0x00, (byte) 0x00 };
-
-                if (isChecked == true)
-                    buf[1] = 0x01;
-                else
-                    buf[1] = 0x00;
-
-                mCharacteristicTx.setValue(buf);
-                mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
-            }
-        });
-        */
-
+        // It has 5 bytes bytes: maker, data value red, data value green, data value blue, reserved
         mColorPickerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
