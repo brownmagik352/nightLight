@@ -17,7 +17,7 @@
 SYSTEM_MODE(SEMI_AUTOMATIC); 
 #endif
 
-#define RECEIVE_MAX_LEN    3
+#define RECEIVE_MAX_LEN    5
 #define BLE_SHORT_NAME_LEN 0x08 // must be in the range of [0x01, 0x09]
 #define BLE_SHORT_NAME 'a','p','s','u','m','a','n'  // define each char but the number of char should be BLE_SHORT_NAME_LEN-1
 
@@ -89,10 +89,7 @@ int bleWriteCallback(uint16_t value_handle, uint8_t *buffer, uint16_t size) {
     
     /* Process the data */
     if (receive_data[0] == 0x01) { // Command is to control digital out pin
-      if (receive_data[1] == 0x01)
-        setColor(255, 0, 0); // red
-      else
-        setColor(0, 0, 255); // blue
+      setColor(receive_data[1], receive_data[2], receive_data[3]);
     }
   }
   return 0;

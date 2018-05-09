@@ -1,8 +1,7 @@
-/* BLE demo: Use a single button to send data to the Duo board from the Android app to control the
- * LED on and off on the board through BLE.
- *
- * The app is built based on the example code provided by the RedBear Team:
- * https://github.com/RedBearLab/Android
+/*
+    Android App for Updating NightLight Color
+    Heavily borrows from Scaffolding provided by TA from https://github.com/jonfroehlich/CSE590Sp2018
+    Uses color picker from https://github.com/Pes8/android-material-color-picker-dialog
  */
 package com.example.lianghe.android_ble_basic;
 
@@ -41,6 +40,7 @@ import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
+// https://github.com/Pes8/android-material-color-picker-dialog
 import com.pes.androidmaterialcolorpickerdialog.ColorPicker;
 
 public class MainActivity extends AppCompatActivity {
@@ -79,6 +79,11 @@ public class MainActivity extends AppCompatActivity {
 
     final private static char[] hexArray = { '0', '1', '2', '3', '4', '5', '6',
             '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+
+    // RGB colors to send over
+    private int mRed;
+    private int mGreen;
+    private int mBlue;
 
 
     // Process service connection. Created by the RedBear Team
@@ -320,6 +325,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        /*
         // Send data to Duo board
         // It has three bytes: maker, data value, reserved
         mDigitalOutBtn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -339,6 +345,7 @@ public class MainActivity extends AppCompatActivity {
                 mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
             }
         });
+        */
 
         mColorPickerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -346,22 +353,15 @@ public class MainActivity extends AppCompatActivity {
                 /* Show color picker dialog */
                 cp.show();
 
-                //cp.enableAutoClose(); // Enable auto-dismiss for the dialog
-
                 /* Set a new Listener called when user click "select" */
                 cp.setCallback(new ColorPickerCallback() {
                     @Override
                     public void onColorChosen(@ColorInt int color) {
                         // Do whatever you want
                         // Examples
-                        Log.d("Alpha", Integer.toString(Color.alpha(color)));
-                        Log.d("Red", Integer.toString(Color.red(color)));
-                        Log.d("Green", Integer.toString(Color.green(color)));
-                        Log.d("Blue", Integer.toString(Color.blue(color)));
-
-                        Log.d("Pure Hex", Integer.toHexString(color));
-                        Log.d("#Hex no alpha", String.format("#%06X", (0xFFFFFF & color)));
-                        Log.d("#Hex with alpha", String.format("#%08X", (0xFFFFFFFF & color)));
+                        byte buf[] = new byte[] { (byte) 0x01, (byte) Color.red(color), (byte) Color.green(color), (byte) Color.blue(color), (byte) 0x00 };
+                        mCharacteristicTx.setValue(buf);
+                        mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
 
                         // If the auto-dismiss option is not enable (disabled as default) you have to manually dimiss the dialog
                         cp.dismiss();
