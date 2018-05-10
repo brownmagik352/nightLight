@@ -284,7 +284,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         _accelSensor = _sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         _sensorManager.registerListener(this, _accelSensor, SensorManager.SENSOR_DELAY_GAME);
         accelValues = (TextView) findViewById(R.id.accel_values);
-        accelValues.setText("Accel X: %f\tR: %d\nAccel Y: %f\tG: %d\nAccel Z: %f\tB: %d");
         mAccelPickerBtn = (Button) findViewById(R.id.accel_toggle);
 
 
@@ -345,8 +344,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
-        // Send data to Duo board
-        // It has 5 bytes bytes: maker, data value red, data value green, data value blue, reserved
+
         mColorPickerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -361,8 +359,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 cp.setCallback(new ColorPickerCallback() {
                     @Override
                     public void onColorChosen(@ColorInt int color) {
-                        // Do whatever you want
-                        // Examples
+
+                        sendRGBToBoard(Color.red(color), Color.green(color), Color.blue(color));
+
                         byte buf[] = new byte[] { (byte) 0x01, (byte) Color.red(color), (byte) Color.green(color), (byte) Color.blue(color), (byte) 0x00 };
                         mCharacteristicTx.setValue(buf);
                         mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
@@ -467,7 +466,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
+        switch(sensorEvent.sensor.getType()) {
+            case Sensor.TYPE_ACCELEROMETER:
 
+                if (mUsingAccel) {
+                    float x = sensorEvent.values[0];
+                    float y = sensorEvent.values[1];
+                    float z = sensorEvent.values[2];
+                    int r = Math.round(x) % 256;
+                    int g = Math.round(y) % 256;
+                    int b = Math.round(z) % 256;
+                    accelValues.setText(String.format("Accel X: %.2f\tR: %d\nAccel Y: %.2f\tG: %d\nAccel Z: %.2f\tB: %d", x, r, y, g, z, b));
+                    sendRGBToBoard(r, g, b);
+
+                }
+
+                break;
+        }
     }
 
     @Override
@@ -485,5 +500,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             mUsingAccel = true; // start sending accel value to board
             mColorPickerBtn.setEnabled(false); // disable other picker
         }
+    }
+
+    // Send data to Duo board
+    // It has 5 bytes bytes: maker, data value red, data value green, data value blue, reserved
+    private void sendRGBToBoard(int red, int green, int blue) {
+        byte buf[] = new byte[] { (byte) 0x01, (byte) red, (byte) green, (byte) blue, (byte) 0x00 };
+        mCharacteristicTx.setValue(buf);
+        mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
     }
 }
