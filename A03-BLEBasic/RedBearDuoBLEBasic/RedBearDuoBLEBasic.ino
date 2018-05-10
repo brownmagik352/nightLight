@@ -98,7 +98,6 @@ int bleWriteCallback(uint16_t value_handle, uint8_t *buffer, uint16_t size) {
 void setup() {
   Serial.begin(115200);
   delay(5000);
-  Serial.println("Simple Digital Out Demo.");
 
   // Initialize ble_stack.
   ble.init();
@@ -127,7 +126,20 @@ void setup() {
   pinMode(RGB_BLUE_PIN, OUTPUT);
 }
 
-void loop() {}
+void loop() {
+  // pot value
+  int potVal = analogRead(POT_INPUT_PIN);
+  // read in photovoltaic cell
+  int photoVal = analogRead(PHOTO_INPUT_PIN);
+  
+  unsigned int hexVal = potToHex(potVal);
+  struct RGB ledVal = hexToRGB(hexVal);
+  struct RGB ledValBrightnessAdjusted = rgbLedBrightnessAdjuster(ledVal, photoVal);
+
+  setColor(ledValBrightnessAdjusted.r, ledValBrightnessAdjusted.g, ledValBrightnessAdjusted.b);
+ 
+  delay(DELAY);
+}
 
 // *** HELPER/PROCESSING FUNCTIONS *** //
 
