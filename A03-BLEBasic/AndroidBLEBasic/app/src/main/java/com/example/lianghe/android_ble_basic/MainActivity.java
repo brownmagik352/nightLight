@@ -362,11 +362,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                         sendRGBToBoard(Color.red(color), Color.green(color), Color.blue(color));
 
-                        byte buf[] = new byte[] { (byte) 0x01, (byte) Color.red(color), (byte) Color.green(color), (byte) Color.blue(color), (byte) 0x00 };
-                        mCharacteristicTx.setValue(buf);
-                        mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
-
-                        // If the auto-dismiss option is not enable (disabled as default) you have to manually dimiss the dialog
+                        // If the auto-dismiss option is not enable (disabled as default) you have to manually dismiss the dialog
                         cp.dismiss();
                         // enable accel picker button
                         mAccelPickerBtn.setEnabled(true);
