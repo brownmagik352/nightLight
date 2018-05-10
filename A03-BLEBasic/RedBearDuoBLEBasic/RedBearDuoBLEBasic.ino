@@ -40,6 +40,8 @@ struct RGB {
   int r, g, b;
 };
 
+bool PHONE_VALUES = false; 
+
 
 // UUID is used to find the device by other BLE-abled devices
 static uint8_t service1_uuid[16]    = { 0x71,0x3d,0x00,0x00,0x50,0x3e,0x4c,0x75,0xba,0x94,0x31,0x48,0xf1,0x8d,0x94,0x1e };
@@ -88,8 +90,11 @@ int bleWriteCallback(uint16_t value_handle, uint8_t *buffer, uint16_t size) {
     Serial.println(" ");
     
     /* Process the data */
-    if (receive_data[0] == 0x01) { // Command is to control digital out pin
+    if (receive_data[0] == 0x01) { // Command is to control analog out pin
+      PHONE_VALUES = true;
       setColor(receive_data[1], receive_data[2], receive_data[3]);
+    } else {
+      PHONE_VALUES = false;
     }
   }
   return 0;
@@ -136,7 +141,7 @@ void loop() {
   struct RGB ledVal = hexToRGB(hexVal);
   struct RGB ledValBrightnessAdjusted = rgbLedBrightnessAdjuster(ledVal, photoVal);
 
-  setColor(ledValBrightnessAdjusted.r, ledValBrightnessAdjusted.g, ledValBrightnessAdjusted.b);
+  if (!PHONE_VALUES) setColor(ledValBrightnessAdjusted.r, ledValBrightnessAdjusted.g, ledValBrightnessAdjusted.b);
  
   delay(DELAY);
 }

@@ -120,6 +120,14 @@
         android:background="#dfdfdf" />
 
     <Button
+        android:id="@+id/controls_toggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:enabled="false"
+        android:text="Use Physical Controls" />
+
+    <Button
         android:id="@+id/colorPickerButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

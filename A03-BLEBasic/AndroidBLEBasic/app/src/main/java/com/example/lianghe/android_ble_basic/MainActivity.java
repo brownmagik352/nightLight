@@ -92,6 +92,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     // used for manual picker
     private Button mColorPickerBtn;
 
+    // used for controls picker
+    private Button mControlsPickerBtn;
+
     // Process service connection. Created by the RedBear Team
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
@@ -115,8 +118,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void setButtonDisable() {
         flag = false;
         mConnState = false;
-        mColorPickerBtn.setEnabled(flag);
-        mAccelPickerBtn.setEnabled(flag);
+        setControlsState(false, false, false);
         mConnectBtn.setText("Connect");
         mRssiValue.setText("");
         mDeviceName.setText("");
@@ -126,8 +128,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void setButtonEnable() {
         flag = true;
         mConnState = true;
-        mColorPickerBtn.setEnabled(flag);
-        mAccelPickerBtn.setEnabled(flag);
+        setControlsState(false, true, true); // when connecting physical controls is the default
         mConnectBtn.setText("Disconnect");
     }
 
@@ -286,10 +287,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         accelValues = (TextView) findViewById(R.id.accel_values);
         mAccelPickerBtn = (Button) findViewById(R.id.accel_toggle);
 
-
         // Manual Picker setup
         mColorPickerBtn = (Button) findViewById(R.id.colorPickerButton);
         final ColorPicker cp = new ColorPicker(MainActivity.this);
+
+        // controls picker setup
+        mControlsPickerBtn = (Button) findViewById(R.id.controls_toggle);
 
         // Associate all UI components with variables
         mConnectBtn = (Button) findViewById(R.id.connectBtn);
@@ -350,7 +353,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View view) {
 
                 // disable accel picker button
-                mAccelPickerBtn.setEnabled(false);
+                setControlsState(true, true, true);
 
                 /* Show color picker dialog */
                 cp.show();
@@ -360,12 +363,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     @Override
                     public void onColorChosen(@ColorInt int color) {
 
-                        sendRGBToBoard(Color.red(color), Color.green(color), Color.blue(color));
+                        sendRGBToBoard(true, Color.red(color), Color.green(color), Color.blue(color));
 
                         // If the auto-dismiss option is not enable (disabled as default) you have to manually dismiss the dialog
                         cp.dismiss();
-                        // enable accel picker button
-                        mAccelPickerBtn.setEnabled(true);
+
+                        setControlsState(true, true, true);
 
                     }
                 });
@@ -375,7 +378,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mAccelPickerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleDebug();
+                setControlsState(true, true, false);
+            }
+        });
+
+        mControlsPickerBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                sendRGBToBoard(false, 0, 0, 0);
+                // now going to use controls so button should be disabled and other picker toggles should be clickable
+                setControlsState(false, true, true);
             }
         });
 
@@ -473,8 +485,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     int g = Math.round(y) % 256;
                     int b = Math.round(z) % 256;
                     accelValues.setText(String.format("Accel X: %.2f\tR: %d\nAccel Y: %.2f\tG: %d\nAccel Z: %.2f\tB: %d", x, r, y, g, z, b));
-                    sendRGBToBoard(r, g, b);
-
+                    sendRGBToBoard(true, r, g, b);
                 }
 
                 break;
@@ -486,23 +497,38 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    private void toggleDebug() {
-        if (accelValues.getVisibility() == View.VISIBLE) {
-            accelValues.setVisibility(View.INVISIBLE); // hide feedback UI
-            mUsingAccel = false; // stop sending accel value to board
-            mColorPickerBtn.setEnabled(true); // enable other picker
-        } else {
-            accelValues.setVisibility(View.VISIBLE); // show feedback UI
-            mUsingAccel = true; // start sending accel value to board
-            mColorPickerBtn.setEnabled(false); // disable other picker
-        }
-    }
-
-    // Send data to Duo board
+    // Send RGB values to Duo board (0 for give control back to physical controls, 1 for send color)
     // It has 5 bytes bytes: maker, data value red, data value green, data value blue, reserved
-    private void sendRGBToBoard(int red, int green, int blue) {
-        byte buf[] = new byte[] { (byte) 0x01, (byte) red, (byte) green, (byte) blue, (byte) 0x00 };
+    private void sendRGBToBoard(boolean givingColor, int red, int green, int blue) {
+        int firstVal; // need to do code cleanup later
+        if (givingColor) {
+            firstVal = 0x01;
+        } else {
+            firstVal = 0x00;
+        }
+
+        byte buf[] = new byte[] { (byte) firstVal, (byte) red, (byte) green, (byte) blue, (byte) 0x00 };
         mCharacteristicTx.setValue(buf);
         mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
     }
+
+    private void setControlsState(boolean controls, boolean manual, boolean accel) {
+        mControlsPickerBtn.setEnabled(controls);
+        mColorPickerBtn.setEnabled(manual);
+        mAccelPickerBtn.setEnabled(accel);
+
+        /*
+        if accel button is clicked
+        while connection is present (i.e. some other button is enabled)
+        then you should show accel values and send them over
+        */
+        if (!accel && (controls || manual)) {
+            mUsingAccel = true;
+            accelValues.setVisibility(View.VISIBLE);
+        } else {
+            mUsingAccel = false;
+            accelValues.setVisibility(View.INVISIBLE);
+        }
+    }
+
 }
