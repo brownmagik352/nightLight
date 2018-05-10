@@ -23,6 +23,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.ColorInt;
 import android.support.v7.app.AppCompatActivity;
@@ -40,6 +41,8 @@ import com.example.lianghe.android_ble_basic.BLE.RBLGattAttributes;
 import com.example.lianghe.android_ble_basic.BLE.RBLService;
 import com.pes.androidmaterialcolorpickerdialog.ColorPickerCallback;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -89,11 +92,36 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Button mAccelPickerBtn;
     private TextView accelValues;
 
+    // used for step picker
+    private boolean mUsingSteps = false;
+    private Button mStepPickerBtn;
+
     // used for manual picker
     private Button mColorPickerBtn;
 
     // used for controls picker
     private Button mControlsPickerBtn;
+
+    // STEP COUNTER STUFF
+    // smoothing accelerometer signal stuff
+    private static int MAX_ACCEL_VALUE = 30;
+    private float _rawAccelValues[] = new float[3];
+    private static int SMOOTHING_WINDOW_SIZE = 20;
+    private float _accelValueHistory[][] = new float[3][SMOOTHING_WINDOW_SIZE];
+    private float _runningAccelTotal[] = new float[3];
+    private float _curAccelAvg[] = new float[3];
+    private int _curReadIndex = 0;
+
+    // mladenovStepDetectionAlgorithm
+    public static int _totalSteps = 0;
+    private static float CONSTANT_C = 0.8f;
+    private static float CONSTANT_K = 10.1f;
+    // reduce noise in early steps
+    private static int EARLY_STEPS = 2;
+    private static float CONSTANT_K_early = 10.3f;
+    private static int CHUNKING_SIZE = 10;
+    private int _currentChunkPosition = 0;
+    private float _smoothMagnitudeValues[] = new float[CHUNKING_SIZE];
 
     // Process service connection. Created by the RedBear Team
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -118,7 +146,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void setButtonDisable() {
         flag = false;
         mConnState = false;
-        setControlsState(false, false, false);
+        setControlsState(false, false, false, false);
         mConnectBtn.setText("Connect");
         mRssiValue.setText("");
         mDeviceName.setText("");
@@ -128,7 +156,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void setButtonEnable() {
         flag = true;
         mConnState = true;
-        setControlsState(false, true, true); // when connecting physical controls is the default
+        setControlsState(false, true, true, true); // when connecting physical controls is the default
         mConnectBtn.setText("Disconnect");
     }
 
@@ -286,6 +314,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         _sensorManager.registerListener(this, _accelSensor, SensorManager.SENSOR_DELAY_GAME);
         accelValues = (TextView) findViewById(R.id.accel_values);
         mAccelPickerBtn = (Button) findViewById(R.id.accel_toggle);
+        mStepPickerBtn = (Button) findViewById(R.id.step_toggle);
 
         // Manual Picker setup
         mColorPickerBtn = (Button) findViewById(R.id.colorPickerButton);
@@ -353,7 +382,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View view) {
 
                 // disable accel picker button
-                setControlsState(true, true, true);
+                setControlsState(true, true, true, true);
 
                 /* Show color picker dialog */
                 cp.show();
@@ -368,7 +397,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         // If the auto-dismiss option is not enable (disabled as default) you have to manually dismiss the dialog
                         cp.dismiss();
 
-                        setControlsState(true, true, true);
+                        setControlsState(true, true, true, true);
 
                     }
                 });
@@ -378,7 +407,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mAccelPickerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                setControlsState(true, true, false);
+                setControlsState(true, true, false, true);
+            }
+        });
+
+        mStepPickerBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                setControlsState(true, true, true, false);
             }
         });
 
@@ -387,7 +423,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View view) {
                 sendRGBToBoard(false, 0, 0, 0);
                 // now going to use controls so button should be disabled and other picker toggles should be clickable
-                setControlsState(false, true, true);
+                setControlsState(false, true, true, true);
             }
         });
 
@@ -478,6 +514,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             case Sensor.TYPE_ACCELEROMETER:
 
                 if (mUsingAccel) {
+
                     float x = sensorEvent.values[0];
                     float y = sensorEvent.values[1];
                     float z = sensorEvent.values[2];
@@ -486,6 +523,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     int b = Math.round(z) % 256;
                     accelValues.setText(String.format("Accel X: %.2f\tR: %d\nAccel Y: %.2f\tG: %d\nAccel Z: %.2f\tB: %d", x, r, y, g, z, b));
                     sendRGBToBoard(true, r, g, b);
+
+
+                } else if (mUsingSteps) {
+                    // pull raw values
+                    _rawAccelValues[0] = sensorEvent.values[0];
+                    _rawAccelValues[1] = sensorEvent.values[1];
+                    _rawAccelValues[2] = sensorEvent.values[2];
+
+                    smoothSignal();
+                    float smoothMagnitudeValue = findMagnitude(_curAccelAvg[0], _curAccelAvg[1], _curAccelAvg[2]);
+                    updateRunningMagnitudesValues(smoothMagnitudeValue);
                 }
 
                 break;
@@ -512,10 +560,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
     }
 
-    private void setControlsState(boolean controls, boolean manual, boolean accel) {
+    private void setControlsState(boolean controls, boolean manual, boolean accel, boolean step) {
         mControlsPickerBtn.setEnabled(controls);
         mColorPickerBtn.setEnabled(manual);
         mAccelPickerBtn.setEnabled(accel);
+        mStepPickerBtn.setEnabled(step);
 
         /*
         if accel button is clicked
@@ -529,6 +578,87 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             mUsingAccel = false;
             accelValues.setVisibility(View.INVISIBLE);
         }
+
+        /*
+        if step button is clicked
+        while connection is present (i.e. some other button is enabled)
+        then you should show step values and send them over
+        */
+        if (!step && (controls || manual)) {
+            mUsingSteps = true;
+            accelValues.setVisibility(View.VISIBLE);
+        } else {
+            mUsingSteps = false;
+            accelValues.setVisibility(View.INVISIBLE);
+        }
+    }
+
+    private float findMagnitude(float x, float y, float z) {
+        return (float) Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2) + Math.pow(z, 2));
+    }
+
+    private void smoothSignal() {
+        // Smoothing algorithm adapted from: https://www.arduino.cc/en/Tutorial/Smoothing
+        for (int i = 0; i < 3; i++) {
+            _runningAccelTotal[i] = _runningAccelTotal[i] - _accelValueHistory[i][_curReadIndex];
+            _accelValueHistory[i][_curReadIndex] = _rawAccelValues[i];
+            _runningAccelTotal[i] = _runningAccelTotal[i] + _accelValueHistory[i][_curReadIndex];
+            _curAccelAvg[i] = _runningAccelTotal[i] / SMOOTHING_WINDOW_SIZE;
+        }
+
+        _curReadIndex++;
+        if(_curReadIndex >= SMOOTHING_WINDOW_SIZE){
+            _curReadIndex = 0;
+        }
+    }
+
+    private void updateRunningMagnitudesValues(float recentMagnitudeValue) {
+        _smoothMagnitudeValues[_currentChunkPosition] = recentMagnitudeValue;
+        if (_currentChunkPosition == CHUNKING_SIZE - 1) {
+            mladenovStepDetectionAlgorithm(_smoothMagnitudeValues);
+            _currentChunkPosition = 0;
+        } else {
+            _currentChunkPosition++;
+        }
+    }
+
+    private void mladenovStepDetectionAlgorithm(float magnitudes[]) {
+
+        // Part 1: peak detection & setting threshold
+        int peakCount = 0;
+        float peakAccumulate = 0f;
+        // loop safety variables (1 and CHUNKING_SIZE - 1) given +1 and -1 uses with indexes
+        for (int i = 1; i < CHUNKING_SIZE - 1; i++) {
+            float forwardSlope = magnitudes[i + 1] - magnitudes[i];
+            float backwardSlope = magnitudes[i] - magnitudes[i - 1];
+            if (forwardSlope < 0 && backwardSlope > 0) {
+                peakCount += 1;
+                peakAccumulate += magnitudes[i];
+            }
+        }
+        float peakMean = peakAccumulate / peakCount;
+
+        // Part 2: same peaks with thresholds applied
+        int stepCount = 0;
+        for (int i = 1; i < CHUNKING_SIZE - 1; i++) {
+            //sendRGBToBoard(true, 0, 0, 0);
+            float forwardSlope = magnitudes[i + 1] - magnitudes[i];
+            float backwardSlope = magnitudes[i] - magnitudes[i - 1];
+            if (forwardSlope < 0 && backwardSlope > 0
+                    && magnitudes[i] > CONSTANT_C * peakMean ) {
+                if ((_totalSteps <= EARLY_STEPS && magnitudes[i] > CONSTANT_K_early) ||
+                        (_totalSteps > EARLY_STEPS && magnitudes[i] > CONSTANT_K )) {
+                    stepCount += 1;
+                    // send step to board
+                    byte buf[] = new byte[] { (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
+                    mCharacteristicTx.setValue(buf);
+                    mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
+                }
+            }
+        }
+
+        // update total steps (across chunks)
+        _totalSteps += stepCount;
     }
 
 }

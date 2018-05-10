@@ -42,6 +42,9 @@ struct RGB {
 
 bool PHONE_VALUES = false; 
 
+const int RED_LED_PIN = D3;
+int stepTimer = 0;
+
 
 // UUID is used to find the device by other BLE-abled devices
 static uint8_t service1_uuid[16]    = { 0x71,0x3d,0x00,0x00,0x50,0x3e,0x4c,0x75,0xba,0x94,0x31,0x48,0xf1,0x8d,0x94,0x1e };
@@ -90,9 +93,12 @@ int bleWriteCallback(uint16_t value_handle, uint8_t *buffer, uint16_t size) {
     Serial.println(" ");
     
     /* Process the data */
-    if (receive_data[0] == 0x01) { // Command is to control analog out pin
+    if (receive_data[0] == 0x01) { // command is to set RGB LED color
       PHONE_VALUES = true;
       setColor(receive_data[1], receive_data[2], receive_data[3]);
+    } else if(receive_data[0] == 0x02) { // command is to set RED_LED step color
+      PHONE_VALUES = true;
+      stepTimer = DELAY * 2;
     } else {
       PHONE_VALUES = false;
     }
@@ -129,9 +135,19 @@ void setup() {
   pinMode(RGB_RED_PIN, OUTPUT);
   pinMode(RGB_GREEN_PIN, OUTPUT);
   pinMode(RGB_BLUE_PIN, OUTPUT);
+
+  pinMode(RED_LED_PIN, OUTPUT);
 }
 
 void loop() {
+  // output to RED step test
+  if (stepTimer > 0) {
+    analogWrite(RED_LED_PIN, 255);
+    stepTimer = stepTimer - DELAY;
+  } else {
+    analogWrite(RED_LED_PIN, 0);
+  }
+  
   // pot value
   int potVal = analogRead(POT_INPUT_PIN);
   // read in photovoltaic cell
