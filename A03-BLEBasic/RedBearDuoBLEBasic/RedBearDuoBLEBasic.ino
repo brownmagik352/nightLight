@@ -40,8 +40,10 @@ struct RGB {
   int r, g, b;
 };
 
+// global to supress loop when phone being used
 bool PHONE_VALUES = false; 
 
+// specific for step counting
 const int RED_LED_PIN = D3;
 int stepTimer = 0;
 
@@ -140,7 +142,7 @@ void setup() {
 }
 
 void loop() {
-  // output to RED step test
+  // output to RED LED for steps
   if (stepTimer > 0) {
     analogWrite(RED_LED_PIN, 255);
     stepTimer = stepTimer - DELAY;
