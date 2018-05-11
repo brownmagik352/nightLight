@@ -47,7 +47,7 @@ import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
-// https://github.com/Pes8/android-material-color-picker-dialog
+// Color picker from https://github.com/Pes8/android-material-color-picker-dialog
 import com.pes.androidmaterialcolorpickerdialog.ColorPicker;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
@@ -65,7 +65,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView mUUID = null;
     private String mBluetoothDeviceName = "";
     private String mBluetoothDeviceUUID = "";
-
 
     // Declare all Bluetooth stuff
     private BluetoothGattCharacteristic mCharacteristicTx = null;
@@ -86,15 +85,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
     // Accelerometer Stuff
-    private boolean mUsingAccel = false;
+    private boolean mUsingAccel = false; // sensor is always running, use this to know if it's worth doing anything with it
     private SensorManager _sensorManager;
     private Sensor _accelSensor;
     private Button mAccelPickerBtn;
     private TextView accelValues;
-
-    // used for step picker
-    private boolean mUsingSteps = false;
-    private Button mStepPickerBtn;
 
     // used for manual picker
     private Button mColorPickerBtn;
@@ -103,6 +98,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Button mControlsPickerBtn;
 
     // STEP COUNTER STUFF
+    // used for step picker
+    private boolean mUsingSteps = false; // sensor is always running, use this to know if it's worth doing anything with it (specifically steps)
+    private Button mStepPickerBtn;
+
     // smoothing accelerometer signal stuff
     private static int MAX_ACCEL_VALUE = 30;
     private float _rawAccelValues[] = new float[3];
@@ -376,7 +375,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
-
+        // Manual picker button click event
         mColorPickerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -404,6 +403,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
+        // Accel picker button click event
         mAccelPickerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -411,6 +411,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
+        // Step picker button click event
         mStepPickerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -418,6 +419,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
+        // Physical controls picker button click event
         mControlsPickerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -548,7 +550,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     // Send RGB values to Duo board (0 for give control back to physical controls, 1 for send color)
     // It has 5 bytes bytes: maker, data value red, data value green, data value blue, reserved
     private void sendRGBToBoard(boolean givingColor, int red, int green, int blue) {
-        int firstVal; // need to do code cleanup later
+        int firstVal;
         if (givingColor) {
             firstVal = 0x01;
         } else {
@@ -560,6 +562,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
     }
 
+    // helper function to handle changing of button states across all the different click events
     private void setControlsState(boolean controls, boolean manual, boolean accel, boolean step) {
         mControlsPickerBtn.setEnabled(controls);
         mColorPickerBtn.setEnabled(manual);
@@ -592,6 +595,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             accelValues.setVisibility(View.INVISIBLE);
         }
     }
+
+    // helper functions for step detection, same code from A1
 
     private float findMagnitude(float x, float y, float z) {
         return (float) Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2) + Math.pow(z, 2));
@@ -649,7 +654,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if ((_totalSteps <= EARLY_STEPS && magnitudes[i] > CONSTANT_K_early) ||
                         (_totalSteps > EARLY_STEPS && magnitudes[i] > CONSTANT_K )) {
                     stepCount += 1;
-                    // send step to board
+                    // send step to board, special code the breadboard knows and is hardcoded
                     byte buf[] = new byte[] { (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
                     mCharacteristicTx.setValue(buf);
                     mBluetoothLeService.writeCharacteristic(mCharacteristicTx);
